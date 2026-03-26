@@ -1,44 +1,26 @@
 const jwt = require('jsonwebtoken');
-const { User } = require('../models');
 
-const authMiddleware = async (req, res, next) => {
-    try {
-        const token = req.header('Authorization')?.replace('Bearer ', '');
-        
-        if (!token) {
-            return res.status(401).json({
-                success: false,
-                message: 'No token provided'
-            });
-        }
+module.exports = (req, res, next) => {
+  const header = req.headers.authorization;
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const user = await User.findByPk(decoded.id);
+  if (!header) {
+    return res.status(401).json({
+      success: false,
+      message: 'No token provided'
+    });
+  }
 
-        if (!user) {
-            return res.status(401).json({
-                success: false,
-                message: 'User not found'
-            });
-        }
+  try {
+    const token = header.split(' ')[1];
+    const decoded = jwt.verify(token, 'secret123');
 
-        if (!user.is_active) {
-            return res.status(401).json({
-                success: false,
-                message: 'Account is deactivated'
-            });
-        }
+    req.user = decoded;
 
-        req.user = user;
-        req.token = token;
-        next();
-    } catch (error) {
-        console.error('Auth error:', error);
-        res.status(401).json({
-            success: false,
-            message: 'Invalid token'
-        });
-    }
+    next();
+  } catch (error) {
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid token'
+    });
+  }
 };
-
-module.exports = authMiddleware;

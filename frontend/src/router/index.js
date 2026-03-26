@@ -58,47 +58,18 @@ const router = createRouter({
   routes
 })
 
-router.beforeEach(async (to, from, next) => {
-  const authStore = useAuthStore()
-  
-  // If token exists but no user, try to fetch user
-  if (authStore.token && !authStore.user) {
-    await authStore.checkAuth()
+router.beforeEach((to, from, next) => {
+  const user = JSON.parse(localStorage.getItem('user'))
+
+  if (to.meta.requiresAuth && !user) {
+    return next('/login')
   }
-  
-  const isAuthenticated = authStore.isAuthenticated
-  const userRole = authStore.user?.role
-  
-  console.log('Router guard - isAuthenticated:', isAuthenticated, 'role:', userRole)
-  console.log('Navigating to:', to.path)
-  
-  if (to.meta.requiresAuth) {
-    if (!isAuthenticated) {
-      next('/login')
-    } else if (to.meta.role && userRole !== to.meta.role) {
-      // Redirect to correct dashboard
-      if (userRole === 'admin') {
-        next('/admin/dashboard')
-      } else if (userRole === 'client') {
-        next('/client/dashboard')
-      } else {
-        next('/login')
-      }
-    } else {
-      next()
-    }
-  } else if (to.meta.guest && isAuthenticated) {
-    // Redirect authenticated users to their dashboard
-    if (userRole === 'admin') {
-      next('/admin/dashboard')
-    } else if (userRole === 'client') {
-      next('/client/dashboard')
-    } else {
-      next()
-    }
-  } else {
-    next()
+
+  if (to.meta.role && user?.role !== to.meta.role) {
+    return next('/login')
   }
+
+  next()
 })
 
 export default router

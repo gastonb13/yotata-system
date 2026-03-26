@@ -324,276 +324,52 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import { api } from '../../api';
+import { ref, onMounted } from 'vue'
+import { api } from '../../api'
 
-const clients = ref([]);
-const searchQuery = ref('');
-const statusFilter = ref('');
-const currentPage = ref(1);
-const itemsPerPage = ref(10);
-const showCreateModal = ref(false);
-const showEditModal = ref(false);
-const showViewModal = ref(false);
-const selectedClient = ref(null);
-const saving = ref(false);
-
-const stats = ref({
-  total: 0,
-  active: 0,
-  totalOrders: 0,
-  totalRevenue: 0
-});
+const clients = ref([])
+const loading = ref(false)
 
 const form = ref({
-  id: null,
   company_name: '',
-  contact_person: '',
-  email: '',
-  password: '',
-  phone: '',
-  mobile: '',
-  address: '',
-  city: '',
-  country: 'Tunisia',
-  tax_number: '',
-  credit_limit: '',
-  payment_terms: 30,
-  status: 'active',
-  notes: ''
-});
-
-const filteredClients = computed(() => {
-  let filtered = clients.value;
-  
-  if (searchQuery.value) {
-    filtered = filtered.filter(client => 
-      client.company_name?.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      client.contact_person?.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      client.user?.email?.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      client.phone?.includes(searchQuery.value)
-    );
-  }
-  
-  if (statusFilter.value) {
-    filtered = filtered.filter(client => 
-      statusFilter.value === 'active' ? client.user?.is_active : !client.user?.is_active
-    );
-  }
-  
-  return filtered;
-});
-
-const totalPages = computed(() => {
-  return Math.ceil(filteredClients.value.length / itemsPerPage.value);
-});
-
-const paginatedClients = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage.value;
-  const end = start + itemsPerPage.value;
-  return filteredClients.value.slice(start, end);
-});
-
-const formatPrice = (price) => {
-  return Number(price).toFixed(2);
-};
-
-const formatDate = (date) => {
-  return new Date(date).toLocaleDateString();
-};
+  phone: ''
+})
 
 const loadClients = async () => {
+  loading.value = true
   try {
-    const response = await api.get('/employees/clients');
-    if (response.success) {
-      clients.value = response.clients;
-      calculateStats();
-    } else {
-      // Demo data
-      clients.value = [
-        {
-          id: 1,
-          company_name: 'Tech Solutions SARL',
-          contact_person: 'Ahmed Ben Ali',
-          user: { email: 'ahmed@techsolutions.tn', is_active: true },
-          phone: '+216 71 123 456',
-          mobile: '+216 98 123 456',
-          address: 'Centre Urbain Nord, Tunis',
-          city: 'Tunis',
-          country: 'Tunisia',
-          tax_number: '12345678',
-          credit_limit: 50000,
-          payment_terms: 30,
-          order_count: 12,
-          total_spent: 28500.00,
-          notes: 'VIP Client',
-          recent_orders: []
-        },
-        {
-          id: 2,
-          company_name: 'Digital Services',
-          contact_person: 'Sarra Mansour',
-          user: { email: 'sarra@digitalservices.tn', is_active: true },
-          phone: '+216 71 789 012',
-          mobile: '+216 55 789 012',
-          address: 'Les Berges du Lac, Tunis',
-          city: 'Tunis',
-          country: 'Tunisia',
-          tax_number: '87654321',
-          credit_limit: 25000,
-          payment_terms: 15,
-          order_count: 8,
-          total_spent: 12450.50,
-          notes: '',
-          recent_orders: []
-        }
-      ];
-      calculateStats();
-    }
-  } catch (error) {
-    console.error('Error loading clients:', error);
-  }
-};
+    const res = await api.get('/clients')
 
-const calculateStats = () => {
-  stats.value.total = clients.value.length;
-  stats.value.active = clients.value.filter(c => c.user?.is_active).length;
-  stats.value.totalOrders = clients.value.reduce((sum, c) => sum + (c.order_count || 0), 0);
-  stats.value.totalRevenue = clients.value.reduce((sum, c) => sum + (c.total_spent || 0), 0);
-};
-
-const saveClient = async () => {
-  saving.value = true;
-  try {
-    if (showEditModal.value) {
-      const response = await api.put(`/employees/clients/${form.value.id}`, {
-        company_name: form.value.company_name,
-        contact_person: form.value.contact_person,
-        phone: form.value.phone,
-        mobile: form.value.mobile,
-        address: form.value.address,
-        city: form.value.city,
-        country: form.value.country,
-        tax_number: form.value.tax_number,
-        credit_limit: form.value.credit_limit,
-        payment_terms: form.value.payment_terms,
-        status: form.value.status,
-        notes: form.value.notes
-      });
-      if (response.success) {
-        alert('Client updated successfully');
-      }
-    } else {
-      const response = await api.post('/employees/clients', {
-        email: form.value.email,
-        password: form.value.password,
-        company_name: form.value.company_name,
-        contact_person: form.value.contact_person,
-        phone: form.value.phone,
-        mobile: form.value.mobile,
-        address: form.value.address,
-        city: form.value.city,
-        country: form.value.country,
-        tax_number: form.value.tax_number,
-        credit_limit: form.value.credit_limit,
-        payment_terms: form.value.payment_terms,
-        notes: form.value.notes
-      });
-      if (response.success) {
-        alert('Client created successfully');
-      }
+    if (res.data.success) {
+      clients.value = res.data.clients
     }
-    closeModal();
-    await loadClients();
-  } catch (error) {
-    console.error('Error saving client:', error);
-    alert('Failed to save client');
+
+  } catch (err) {
+    console.error(err)
   } finally {
-    saving.value = false;
+    loading.value = false
   }
-};
+}
 
-const viewClient = (client) => {
-  selectedClient.value = client;
-  showViewModal.value = true;
-};
+const createClient = async () => {
+  try {
+    const res = await api.post('/clients', form.value)
 
-const editClient = (client) => {
-  selectedClient.value = client;
-  form.value = {
-    id: client.id,
-    company_name: client.company_name,
-    contact_person: client.contact_person || '',
-    email: client.user?.email || '',
-    password: '',
-    phone: client.phone || '',
-    mobile: client.mobile || '',
-    address: client.address || '',
-    city: client.city || '',
-    country: client.country || 'Tunisia',
-    tax_number: client.tax_number || '',
-    credit_limit: client.credit_limit || '',
-    payment_terms: client.payment_terms || 30,
-    status: client.user?.is_active ? 'active' : 'inactive',
-    notes: client.notes || ''
-  };
-  showEditModal.value = true;
-};
+    if (res.data.success) {
+      form.value.company_name = ''
+      form.value.phone = ''
 
-const toggleClientStatus = async (client) => {
-  const action = client.user?.is_active ? 'deactivate' : 'activate';
-  if (confirm(`Are you sure you want to ${action} this client?`)) {
-    try {
-      const response = await api.put(`/employees/clients/${client.id}/toggle-status`);
-      if (response.success) {
-        await loadClients();
-      }
-    } catch (error) {
-      console.error('Error toggling client status:', error);
-      alert('Failed to update client status');
+      await loadClients() // 🔥 reload list
     }
+
+  } catch (err) {
+    console.error(err)
   }
-};
-
-const closeModal = () => {
-  showCreateModal.value = false;
-  showEditModal.value = false;
-  form.value = {
-    id: null,
-    company_name: '',
-    contact_person: '',
-    email: '',
-    password: '',
-    phone: '',
-    mobile: '',
-    address: '',
-    city: '',
-    country: 'Tunisia',
-    tax_number: '',
-    credit_limit: '',
-    payment_terms: 30,
-    status: 'active',
-    notes: ''
-  };
-};
-
-
-const closeViewModal = () => {
-  showViewModal.value = false;
-  selectedClient.value = null;
-};
-
-const prevPage = () => {
-  if (currentPage.value > 1) currentPage.value--;
-};
-
-const nextPage = () => {
-  if (currentPage.value < totalPages.value) currentPage.value++;
-};
+}
 
 onMounted(() => {
-  loadClients();
-});
+  loadClients()
+})
 </script>
 
 <style scoped>

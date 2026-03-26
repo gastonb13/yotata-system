@@ -1,28 +1,13 @@
 const express = require('express');
 const router = express.Router();
 
-router.get('/profile', (req, res) => {
-    res.json({ success: true, client: { company_name: 'Test Company', email: 'test@example.com' } });
-});
+const { createClient, getClients } = require('../controllers/clientController');
+const auth = require('../middleware/auth');
 
-router.put('/profile', (req, res) => {
-    res.json({ success: true, message: 'Profile updated successfully' });
-});
+// GET ALL CLIENTS
+router.get('/', auth, getClients);
 
-router.get('/stats', (req, res) => {
-    res.json({ success: true, stats: { activeOrders: 5, totalSpent: 1250, pendingRequests: 2 } });
-});
-
-router.get('/orders', (req, res) => {
-    res.json({ success: true, orders: [] });
-});
-
-router.get('/orders/:id', (req, res) => {
-    res.json({ success: true, order: { id: req.params.id, status: 'pending' } });
-});
-
-router.get('/documents', (req, res) => {
-    res.json({ success: true, documents: [] });
-});
+// CREATE CLIENT
+router.post('/', auth, createClient);
 
 module.exports = router;
